@@ -185,7 +185,7 @@ begin
 
   SetLength(infob, 16);
   Move(info[0], infob[0], 16);
-   AddBlock(infob, BlockType.Host);
+   AddBlock(infob, BlockType.Cpu);
 end;
 
 procedure AddBlock(const p: TArray<Byte>; const blockType: BlockType);

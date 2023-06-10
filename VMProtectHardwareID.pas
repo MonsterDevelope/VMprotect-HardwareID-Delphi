@@ -34,7 +34,7 @@ implementation
 
 function GetHardwareID(buf: integer=0): String;
 begin
-   // old methods
+
 			GetCpu(0);
 			GetCpu(1);
 			_startBlock := Length(_blocks);

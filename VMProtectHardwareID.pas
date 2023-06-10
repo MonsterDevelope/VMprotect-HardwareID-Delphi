@@ -38,7 +38,7 @@ begin
 			GetCpu(0);
 			GetCpu(1);
 			_startBlock := Length(_blocks);
-			// new methods, we'll return HWID starting from this DWORD
+			
 			GetCpu(2);
 			GetMachineName();
 			GetHdd();

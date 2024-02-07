@@ -87,24 +87,32 @@ begin
 end;
 
 
+
 function IsCPUID_Available: Boolean; register;
 asm
-  PUSHFD                                   { direct access to flags no possible, only via stack }
-  POP     EAX                         { flags to EAX }
-  MOV     EDX,EAX               { save current flags }
-  XOR     EAX,ID_BIT     { not ID bit }
-  PUSH    EAX                         { onto stack }
-  POPFD                                        { from stack to flags, with not ID bit }
-  PUSHFD                                   { back to stack }
-  POP     EAX                         { get back to EAX }
-  XOR     EAX,EDX               { check if ID bit affected }
-  JZ      @exit                    { no, CPUID not availavle }
-  MOV     AL,True               { Result=True }
+{$IFDEF CPUx86}
+  PUSHFD                 {save EFLAGS to stack}
+  POP     EAX            {store EFLAGS in EAX}
+  MOV     EDX, EAX       {save in EDX for later testing}
+  XOR     EAX, $200000;  {flip ID bit in EFLAGS}
+  PUSH    EAX            {save new EFLAGS value on stack}
+  POPFD                  {replace current EFLAGS value}
+  PUSHFD                 {get new EFLAGS}
+  POP     EAX            {store new EFLAGS in EAX}
+  XOR     EAX, EDX       {check if ID bit changed}
+  JZ      @exit          {no, CPUID not available}
+  MOV     EAX, True      {yes, CPUID is available}
 @exit:
+{$ELSE}
+  MOV     EAX, True      {x64 always has CPUID}
+{$ENDIF}
 end;
 
-function GetCPUID: TCPUID; assembler; register;
+
+
+function GetCPUID1: TCPUID; assembler; register;
 asm
+{$IFDEF CPUx86}
   PUSH    EBX         { Save affected register }
   PUSH    EDI
   MOV     EDI,EAX     { @Resukt }
@@ -119,10 +127,28 @@ asm
   STOSD               { CPUID[4] }
   POP     EDI                         { Restore registers }
   POP     EBX
+   {$ELSE}
+  PUSH  rbx
+  PUSH  rdi
+  mov   rdi, rcx
+  mov   eax, 1
+  cpuid
+  mov   [rdi],eax
+  add   rdi,4
+  mov   [rdi],ebx
+  add   rdi,4
+  mov   [rdi],ecx
+  add   rdi,4
+  mov   [rdi],edx
+  pop   rdi
+  pop   rbx
+ {$ENDIF}
 end;
 
-function GetCPUVendor: TVendor; assembler; register;
+
+function GetCPUVendor1: TVendor; assembler; register;
 asm
+{$IFDEF CPUx86}
   PUSH    EBX                         { Save affected register }
   PUSH    EDI
   MOV     EDI,EAX               { @Result (TVendor) }
@@ -149,6 +175,7 @@ asm
   LOOP    @3
   POP     EDI                         { Restore registers }
   POP     EBX
+  {$ENDIF}
 end;
 
 procedure __Init__;
@@ -167,7 +194,7 @@ begin
   //TODO: foreach cpu:
      for I := Low(CPUID) to High(CPUID)  do CPUID[I] := -1;
   if IsCPUID_Available then begin
-       CPUID:= GetCPUID;
+       CPUID:= GetCPUID1;
   end;
 
   SetLength(info,Length(CPUID)) ;
